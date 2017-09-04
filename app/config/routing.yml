@@ -1,36 +1,72 @@
-lexik_paybox:
-    resource: "@LexikPayboxBundle/Resources/config/routing.yml"
-    prefix:   "/don"
+#
+# Health
+#
+app_health:
+    resource: "@AppBundle/Controller/HealthController.php"
+    type:     "annotation"
 
+#
+# Assets
+#
+app_assets:
+    resource: "@AppBundle/Controller/AssetsController.php"
+    type:     "annotation"
+
+#
+# API
+#
+app_api:
+    resource: "@AppBundle/Controller/Api"
+    type:     "annotation"
+    prefix:   "/api"
+
+#
+# Admin panel
+#
 admin_dashboard:
     resource: "@SonataAdminBundle/Resources/config/routing/sonata_admin.xml"
     prefix:   "/admin"
+    condition: "not (context.getHost() matches '/legislatives/i')"
 
 admin_crud:
     resource: .
     type:     sonata_admin
     prefix:   "/admin"
-
-app:
-    resource: "@AppBundle/Controller/"
-    type:     "annotation"
-    host:     "%enmarche_domain%"
+    condition: "not (context.getHost() matches '/legislatives/i')"
 
 app_admin:
     resource: "@AppBundle/Controller/Admin"
     type:     "annotation"
     prefix:   "/admin"
-    host:     "%enmarche_domain%"
+    condition: "not (context.getHost() matches '/legislatives/i')"
 
+#
+# En Marche app
+#
+lexik_paybox:
+    resource: "@LexikPayboxBundle/Resources/config/routing.yml"
+    prefix:   "/don"
+    condition: "not (context.getHost() matches '/legislatives/i')"
+
+app_enmarche:
+    resource: "@AppBundle/Controller/EnMarche"
+    type:     "annotation"
+    condition: "not (context.getHost() matches '/legislatives/i')"
+
+#
+# Legislatives app
+#
 app_legislatives:
     resource: "@AppBundle/Controller/Legislatives"
     type:     "annotation"
-    host:     "%legislatives_domain%"
+    condition: "context.getHost() matches '/legislatives/i'"
 
-app_health:
-    resource: "@AppBundle/Controller/HealthController.php"
-    type:     "annotation"
-
-app_assets:
-    resource: "@AppBundle/Controller/AssetsController.php"
-    type:     "annotation"
+#
+# Legacy
+#
+app_desintox:
+    path: /emmanuel-macron/desintox/{slug}
+    defaults:
+        slug: ~
+        _controller: FrameworkBundle:Redirect:redirect
+        route: ~

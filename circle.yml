@@ -23,15 +23,30 @@ dependencies:
             if [[ ! -e ~/.yarn/bin/yarn || $(yarn --version) != "${YARN_VERSION}" ]]; then
               curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version $YARN_VERSION
             fi
-        - echo "memory_limit = 512M" > /opt/circleci/php/$(phpenv global)/etc/conf.d/memory.ini
+        - echo "memory_limit = 1152M" > /opt/circleci/php/$(phpenv global)/etc/conf.d/memory.ini
     override:
         - yarn install
         - composer install --no-interaction
 
 test:
     override:
-        - case $CIRCLE_NODE_INDEX in 0) mkdir -p $CIRCLE_TEST_REPORTS/phpunit && ./vendor/bin/phpunit --exclude-group functionnal --log-junit $CIRCLE_TEST_REPORTS/phpunit/junit.xml && yarn lint && yarn test && yarn run build-prod ;; 1) mkdir -p $CIRCLE_TEST_REPORTS/phpunit && ./vendor/bin/phpunit --group functionnal --log-junit $CIRCLE_TEST_REPORTS/phpunit/junit.xml ;; esac:
-              parallel: true
+        # Lint and test JS
+        - yarn lint
+        - yarn test
+
+        # Prepare PHP tests
+        - rm -rf var/cache/test /tmp/data.db app/data/dumped_referents_users
+        - ./bin/console doctrine:schema:create --env=test_sqlite
+        - ./bin/console doctrine:schema:drop --force --env=test_mysql
+        - ./bin/console doctrine:schema:create --env=test_mysql
+        - mkdir -p $CIRCLE_TEST_REPORTS/phpunit
+
+        # PHP unit and functional tests
+        - yarn run build-amp
+        - ./vendor/bin/phpunit --log-junit $CIRCLE_TEST_REPORTS/phpunit/junit.xml
+
+        # Try to build production JS
+        - yarn run build-prod
 
 deployment:
     staging:
@@ -39,7 +54,7 @@ deployment:
         owner: EnMarche
         commands:
             # Check packages security
-            #- bin/console security:check
+            - bin/console security:check
 
             # Google Cloud authentication
             - echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json && cp ${HOME}/gcloud-service-key.json gcloud-service-key.json
@@ -49,17 +64,18 @@ deployment:
 
             # Build the image
             - yarn run build-prod
+            - yarn run build-amp
             - docker build -t enmarche-common -f prod.common.dockerfile .
             - docker build -t eu.gcr.io/$GCLOUD_PROJECT/app:$CIRCLE_SHA1 -f prod.app.dockerfile .
-            - docker build -t eu.gcr.io/$GCLOUD_PROJECT/worker-mailjet:$CIRCLE_SHA1 -f prod.worker-mailjet.dockerfile .
-            - docker build -t eu.gcr.io/$GCLOUD_PROJECT/worker-referents-users-dumper:$CIRCLE_SHA1 -f prod.worker-referents-users-dumper.dockerfile .
-            - docker build -t eu.gcr.io/$GCLOUD_PROJECT/cron:$CIRCLE_SHA1 -f prod.cron.dockerfile .
+            - docker build -t eu.gcr.io/$GCLOUD_PROJECT/worker-mailjet-campaign:$CIRCLE_SHA1 -f prod.worker-mailjet-campaign.dockerfile .
+            - docker build -t eu.gcr.io/$GCLOUD_PROJECT/worker-mailjet-transactional:$CIRCLE_SHA1 -f prod.worker-mailjet-transactional.dockerfile .
+            - docker build -t eu.gcr.io/$GCLOUD_PROJECT/worker-referent:$CIRCLE_SHA1 -f prod.worker-referent.dockerfile .
 
             # Push the images to Google Cloud
             - sudo /opt/google-cloud-sdk/bin/gcloud docker -- push eu.gcr.io/$GCLOUD_PROJECT/app:$CIRCLE_SHA1
-            - sudo /opt/google-cloud-sdk/bin/gcloud docker -- push eu.gcr.io/$GCLOUD_PROJECT/worker-mailjet:$CIRCLE_SHA1
-            - sudo /opt/google-cloud-sdk/bin/gcloud docker -- push eu.gcr.io/$GCLOUD_PROJECT/worker-referents-users-dumper:$CIRCLE_SHA1
-            - sudo /opt/google-cloud-sdk/bin/gcloud docker -- push eu.gcr.io/$GCLOUD_PROJECT/cron:$CIRCLE_SHA1
+            - sudo /opt/google-cloud-sdk/bin/gcloud docker -- push eu.gcr.io/$GCLOUD_PROJECT/worker-mailjet-campaign:$CIRCLE_SHA1
+            - sudo /opt/google-cloud-sdk/bin/gcloud docker -- push eu.gcr.io/$GCLOUD_PROJECT/worker-mailjet-transactional:$CIRCLE_SHA1
+            - sudo /opt/google-cloud-sdk/bin/gcloud docker -- push eu.gcr.io/$GCLOUD_PROJECT/worker-referent:$CIRCLE_SHA1
 
             # Deploy to staging
             - sudo /opt/google-cloud-sdk/bin/gcloud --quiet components update kubectl

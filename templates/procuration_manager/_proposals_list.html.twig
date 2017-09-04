@@ -1,0 +1,61 @@
+{% for proxy in proxies %}
+    <tr>
+        <td class="datagrid__table__col--hide-mobile">
+            {{ proxy.id }}
+        </td>
+        <td class="datagrid__table__col--left">
+            <strong>{{ proxy.firstNames }} {{ proxy.lastName }}</strong>
+            {% if proxy.reliabilityDescription %}
+                ({{ proxy.reliabilityDescription }})
+            {% endif %}
+            <br/>
+            Email :
+            <a href="mailto:{{ proxy.emailAddress }}">
+                {{ proxy.emailAddress }}
+            </a>
+            {% if proxy.phone %}
+                <br />
+                Téléphone :
+                <a href="{{ proxy.phone|phone_number_format(constant('\\libphonenumber\\PhoneNumberFormat::RFC3966')) }}">
+                    {{ proxy.phone|phone_number_format }}
+                </a>
+            {% endif %}
+            <br />
+            <span class="datagrid__table__col--hide-mobile">
+                <em>Lieu de vote :</em>
+                {{ proxy.votePostalCode }} {{ proxy.voteCityName }} {{ proxy.voteCountry }}
+            </span>
+        </td>
+        <td class="datagrid__table__col--left">
+            {{ include('procuration_manager/_ballots.html.twig', {
+                'legislative_first_round': proxy.remainingAvailabilities.legislatives.first,
+                'legislative_second_round': proxy.remainingAvailabilities.legislatives.second,
+            }, with_context=false) }}
+        </td>
+        <td class="datagrid__table__col--hide-mobile">
+            {{ proxy.createdAt|date('d/m/Y H:i') }}
+        </td>
+        <td>
+            {% if proxy.foundRequest %}
+                Associé à la<br />
+                demande n°<a href="{{ path('app_procuration_manager_request', {'id': proxy.foundRequest.id}) }}">{{ proxy.foundRequest.id }}</a>
+            {% elseif proxy.disabled %}
+                Désactivé<br />
+                (n'est plus associable)
+            {% else %}
+                <strong>Disponible</strong>
+            {% endif %}
+        </td>
+        <td>
+            {% if proxy.disabled %}
+                <a href="{{ path('app_procuration_manager_proposal_transform', {'id': proxy.id, 'action': 'activer'}) }}">
+                    Réactiver
+                </a>
+            {% else %}
+                <a href="{{ path('app_procuration_manager_proposal_transform', {'id': proxy.id, 'action': 'desactiver'}) }}">
+                    Désactiver
+                </a>
+            {% endif %}
+        </td>
+    </tr>
+{% endfor %}

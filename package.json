@@ -1,6 +1,7 @@
 {
   "name": "enmarche_fr",
   "scripts": {
+    "build-amp": "node_modules/.bin/node-sass --output-style compressed front/style/amp.scss > templates/amp/style.css.twig",
     "build-prod": "node_modules/.bin/webpack --config webpack.config.prod.js",
     "build-dev": "node_modules/.bin/webpack --config webpack.config.dev.js",
     "watch": "node_modules/.bin/webpack --config webpack.config.dev.js --progress --colors --watch",
@@ -10,6 +11,7 @@
     "lint:watch": "npm run lint -- --watch"
   },
   "dependencies": {
+    "@mapbox/polylabel": "^1.0.2",
     "algoliasearch": "^3.22.1",
     "babel-cli": "^6.18.0",
     "babel-core": "^6.18.2",

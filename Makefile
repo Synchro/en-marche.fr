@@ -15,7 +15,7 @@ help:
 ##---------------------------------------------------------------------------
 
 start:          ## Install and start the project
-start: build up app/config/parameters.yml db web/built perm
+start: build up app/config/parameters.yml db web/built assets-amp perm
 
 stop:           ## Remove docker containers
 	$(FIG) kill
@@ -39,7 +39,8 @@ clean: clear
 
 cc:             ## Clear the cache in dev env
 cc:
-	$(RUN) $(CONSOLE) cache:clear
+	$(RUN) $(CONSOLE) cache:clear --no-warmup
+	$(RUN) $(CONSOLE) cache:warmup
 
 
 ##
@@ -87,6 +88,10 @@ assets-prod:    ## Build the production version of the assets
 assets-prod: node_modules
 	$(RUN) yarn build-prod
 
+assets-amp:     ## Build the production version of the AMP CSS
+assets-amp: node_modules
+	$(RUN) yarn build-amp
+
 
 ##
 ## Tests
@@ -97,15 +102,24 @@ test: tu tf tj
 
 tu:             ## Run the PHP unit tests
 tu: vendor
-	$(RUN) vendor/bin/phpunit --exclude-group functionnal
+	$(EXEC) vendor/bin/phpunit --exclude-group functional || true
 
 tf:             ## Run the PHP functional tests
-tf: vendor
-	$(RUN) vendor/bin/phpunit --group functionnal
+tf: tfp
+	$(EXEC) vendor/bin/phpunit --group functional || true
+
+tfp:            ## Prepare the PHP functional tests
+tfp: vendor assets-amp
+	$(EXEC) rm -rf var/cache/test var/cache/test_sqlite var/cache/test_mysql /tmp/data.db app/data/dumped_referents_users || true
+	$(EXEC) $(CONSOLE) doctrine:database:create --env=test_sqlite || true
+	$(EXEC) $(CONSOLE) doctrine:schema:create --env=test_sqlite || true
+	$(EXEC) $(CONSOLE) doctrine:database:create --if-not-exists --env=test_mysql || true
+	$(EXEC) $(CONSOLE) doctrine:schema:drop --force --env=test_mysql || true
+	$(EXEC) $(CONSOLE) doctrine:schema:create --env=test_mysql || true
 
 tj:             ## Run the Javascript tests
 tj: node_modules
-	$(RUN) yarn test
+	$(EXEC) yarn test
 
 lint:           ## Run lint on Twig, YAML and Javascript files
 lint: ls ly lt lj
@@ -117,11 +131,15 @@ ly:
 	$(RUN) $(CONSOLE) lint:yaml app/config
 
 lt:
-	$(RUN) $(CONSOLE) lint:twig app/Resources
+	$(RUN) $(CONSOLE) lint:twig templates
 
 lj:             ## Lint the Javascript to follow the convention
 lj: node_modules
 	$(RUN) yarn lint
+
+ljfix:          ## Lint and try to fix the Javascript to follow the convention
+ljfix: node_modules
+	$(RUN) yarn lint -- --fix
 
 
 ##
@@ -144,7 +162,7 @@ up:
 	$(FIG) up -d
 
 perm:
-	-$(EXEC) chmod 777 -R var
+	-$(EXEC) chmod -R 777 var
 
 # Rules from files
 

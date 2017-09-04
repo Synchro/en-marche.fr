@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+
+{% use 'adherent/_membership_form.html.twig' %}
+
+{% block banner '' %}
+{% block title 'Adhérer au mouvement En Marche !' %}
+
+{% block stylesheets %}
+    <style type="text/css">
+        nav,
+        .cc-window {
+            display: none !important;
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+    {% import 'javascript.js.twig' as js %}
+    <script type="text/javascript">
+        Kernel.onLoad(function() {
+            {{ js.address(form.address) }}
+            App.runRegistration();
+        });
+    </script>
+    <script src="https://www.google.com/recaptcha/api.js"></script>
+{% endblock %}
+
+{% block content %}
+
+    <main class="content register">
+        <section class="register__header background--blue progressive-background"
+                 data-sd="{{ static_asset('registration-hdr.jpg', {'w': 300, 'q': 20}) }}"
+                 data-hd="{{ static_asset('registration-hdr.jpg', {'w': 2000, 'q': 70}) }}">
+            <div class="l__wrapper l__row l__row--h-stretch list__links--nav space--30-0">
+                <h1><a href="{{ path('homepage') }}" class="link--no-decor text--logo text--white text--center">En Marche !</a></h1>
+            </div>
+            <header class="space--60-0 l__wrapper--slim l__col l__col--center text--center b__nudge--bottom-60">
+                <h1 class="b__nudge--bottom-small text--blue text--larger">
+                    <span class="text--on-white">Adhérer à En Marche !</span>
+                </h1>
+                <div class="text--white text--body text--bold text--medium-small space--10-0">C’est facile, gratuit et 3 minutes suffiront.</div>
+                <div class="text--body text--white">Vous voulez participer à la révolution en Marche, vous engager et devenir un acteur de celle-ci ou simplement vous tenir informé de nos idées et de nos actions ?</div>
+            </header>
+        </section>
+
+        <section class="register__content">
+            <article class="l__wrapper--slim b__nudge--bottom-60">
+                <p class="text--body">En Marche ! est un collectif citoyen qui part d'une conviction :
+                    les Français doivent être au cœur de la vie politique et non son décor. Ce collectif
+                    n'est pas l'addition d'individus, mais le rassemblement de personnes engagées qui
+                    partagent un socle de valeurs.</p>
+            </article>
+            <article class="l__wrapper--slim b__nudge--bottom-huge l__col l__col--center">
+                <div class="register__form">
+                    {{ block('adherent_membership_form') }}
+                </div>
+                <p class="text--summary b__nudge--top-50">
+                    Les informations que vous nous communiquez sont nécessaires à la gestion de
+                    vos dons et de nos relations. Elles sont exclusivement réservées à l'usage
+                    de En Marche et/ou des candidats de En Marche. En retournant ce formulaire,
+                    vous autorisez En Marche et/ou les candidats de En Marche à utiliser vos données
+                    pour des opérations de communication politique et de dons. A ces fins, vous
+                    acceptez que En Marche communique vos données à tout candidat aux élections
+                    législatives 2017 investi par En Marche, afin que ce dernier effectue, pour
+                    le compte de En Marche et/ou pour son propre compte, des opérations de
+                    communication politique. Vos informations ne pourront être communiquées qu'à
+                    des co-contractants qui en leur qualité de sous-traitants de En Marche, n'agiront
+                    que sur instruction de cette dernière et seront soumis à une stricte obligation
+                    de confidentialité. En application des articles 38 et suivants de la loi du 6
+                    janvier 1978, vous bénéficiez des droits d'accès, de rectification, de suppression
+                    et d'opposition aux informations vous concernant. Vous pouvez exercer ces droits en
+                    nous écrivant à l'adresse : <a href="mailto:contact@en-marche.fr">contact@en-marche.fr</a>
+                    ou En Marche - BP 80 049 - 94801 Villejuif.
+                </p>
+            </article>
+        </section>
+    </main>
+
+{% endblock %}

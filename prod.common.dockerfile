@@ -42,6 +42,8 @@ RUN apt-get update -q && \
         php7.1-phar \
         php7.1-xml \
         php7.1-zip \
+        php-apcu \
+        php-uuid \
         redis-server \
         supervisor \
         tzdata \
@@ -51,7 +53,19 @@ RUN apt-get update -q && \
 
     cp /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo "Europe/Paris" > /etc/timezone && \
 
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
+
+    # Blackfire
+    wget -O - https://packagecloud.io/gpg.key | apt-key add - \
+    && echo "deb http://packages.blackfire.io/debian any main" | tee /etc/apt/sources.list.d/blackfire.list \
+    && apt-get update -q \
+    && apt-get install -qy blackfire-agent \
+    && version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
+    && curl -A "Docker" -o /tmp/blackfire-probe.tar.gz -D - -L -s https://blackfire.io/api/v1/releases/probe/php/linux/amd64/$version \
+    && tar zxpf /tmp/blackfire-probe.tar.gz -C /tmp \
+    && mv /tmp/blackfire-*.so $(php -r "echo ini_get('extension_dir');")/blackfire.so \
+    && printf "extension=blackfire.so\nblackfire.agent_socket=tcp://\${BLACKFIRE_HOST}:8707\n" > /etc/php/7.1/cli/conf.d/blackfire.ini \
+    && printf "extension=blackfire.so\nblackfire.agent_socket=tcp://\${BLACKFIRE_HOST}:8707\n" > /etc/php/7.1/fpm/conf.d/blackfire.ini
 
 COPY . /app
 
@@ -61,9 +75,12 @@ RUN chmod 0444 gcloud-service-key.json && \
     mkdir var && \
 
     service redis-server start && \
-    SYMFONY_ENV=prod REDIS_HOST=127.0.0.1 composer install --optimize-autoloader --no-interaction --no-ansi --no-dev && \
-    service redis-server stop && \
 
+    SYMFONY_ENV=prod REDIS_HOST=127.0.0.1 composer install --optimize-autoloader --no-interaction --no-ansi --no-dev && \
+    SYMFONY_ENV=prod REDIS_HOST=127.0.0.1 bin/console cache:clear --no-warmup && \
+    SYMFONY_ENV=prod REDIS_HOST=127.0.0.1 bin/console cache:warmup && \
+
+    service redis-server stop && \
     apt-get autoremove -y redis-server && \
 
     chown -R www-data:www-data var && \

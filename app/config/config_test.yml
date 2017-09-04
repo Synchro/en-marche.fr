@@ -2,27 +2,30 @@ imports:
     - { resource: config_dev.yml }
 
 services:
-    app.recaptcha.api_client:
-        class: 'AppBundle\Recaptcha\DummyRecaptchaApiClient'
-        public: false
-
     app.geocoder:
-        class: 'AppBundle\Geocoder\DummyGeocoder'
+        class: 'Tests\AppBundle\Test\Geocoder\DummyGeocoder'
         public: false
 
     app.map.google_maps_static_provider:
-        class: 'AppBundle\Map\DummyStaticMapProvider'
+        class: 'Tests\AppBundle\Test\Map\DummyStaticMapProvider'
 
     app.glide.cache_adapter:
         class: 'League\Flysystem\Memory\MemoryAdapter'
 
-    app.referent.message_handler.producer:
-        class: 'AppBundle\Producer\Mailjet\ReferentMessageNullProducer'
+    old_sound_rabbit_mq.mailjet_campaign_producer:
+        class: 'Tests\AppBundle\Test\Producer\MailjetNullProducer'
         public: false
 
+    old_sound_rabbit_mq.mailjet_transactional_producer:
+        class: 'Tests\AppBundle\Test\Producer\MailjetNullProducer'
+        public: false
+
+    old_sound_rabbit_mq.referent_message_dispatcher_producer:
+        class: 'Tests\AppBundle\Test\Producer\ReferentMessageNullProducer'
+
 parameters:
-    enmarche_domain: localhost
-    legislatives_domain: 'legislatives-en-marche.dev'
+    env(DATABASE_NAME): "enmarche_test"
+    env(RECAPTCHA_PUBLIC_KEY): 'TEST_RECAPTCHA_PUBLIC_KEY'
     adherent_interests:
         agriculture: Agriculture
         culture: Culture
@@ -30,17 +33,25 @@ parameters:
         education: Éducation
         egalite: Egalité F / H
         emploi: Emploi
-        environement: Environement
+        environement: Environnement
         europe: Europe
         international: International
-        institution: Institution
+        institution: Vie publique & institutions
         jeunesse: Jeunesse
         justice: Justice
-        logement: Logement
         numerique: Numérique
         sante: Santé
         securite: Sécurité
         territoire: Territoire
+        social: Affaires sociales
+        sport: Sport
+    adherent_unregistration_reasons:
+        emails: Je reçois trop d'e-mails
+        soutien: J'avais uniquement adhéré pour soutenir la candidature d'Emmanuel Macron
+        gouvernement: Je ne suis plus d'accord avec le gouvernement
+        deputes: Je suis déçu(e) par mon/les député(e)s LaREM
+        mouvement: Je suis déçu(e) par les actions du mouvement En Marche
+        autre: Autre (préciser en commentaires)
 
 framework:
     test: ~

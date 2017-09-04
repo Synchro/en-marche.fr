@@ -19,8 +19,18 @@
             <factory service="doctrine" method="getRepository"/>
         </service>
 
+        <service id="app.repository.committee_feed_item" class="AppBundle\Repository\CommitteeFeedItemRepository" public="false">
+            <argument>AppBundle\Entity\CommitteeFeedItem</argument>
+            <factory service="doctrine" method="getRepository"/>
+        </service>
+
         <service id="app.repository.event" class="AppBundle\Repository\EventRepository" public="false">
             <argument>AppBundle\Entity\Event</argument>
+            <factory service="doctrine" method="getRepository"/>
+        </service>
+
+        <service id="app.repository.citizen_initiative" class="AppBundle\Repository\CitizenInitiativeRepository" public="false">
+            <argument>AppBundle\Entity\CitizenInitiative</argument>
             <factory service="doctrine" method="getRepository"/>
         </service>
 
@@ -61,6 +71,21 @@
 
         <service id="app.repository.legislative_candidate" class="AppBundle\Repository\LegislativeCandidateRepository" public="false">
             <argument>AppBundle\Entity\LegislativeCandidate</argument>
+            <factory service="doctrine" method="getRepository"/>
+        </service>
+
+        <service id="app.repository.summary" class="AppBundle\Repository\SummaryRepository" public="false">
+            <argument>AppBundle\Entity\Summary</argument>
+            <factory service="doctrine" method="getRepository"/>
+        </service>
+
+        <service id="app.repository.skill" class="AppBundle\Repository\SkillRepository" public="false">
+            <argument>AppBundle\Entity\Skill</argument>
+            <factory service="doctrine" method="getRepository"/>
+        </service>
+
+        <service id="app.repository.activity_subscription" class="AppBundle\Repository\ActivitySubscriptionRepository" public="false">
+            <argument>AppBundle\Entity\ActivitySubscription</argument>
             <factory service="doctrine" method="getRepository"/>
         </service>
 

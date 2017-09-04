@@ -6,7 +6,7 @@
 
         <!-- Legislatives -->
         <service id="app.legislatives.contact_handler" class="AppBundle\Legislative\LegislativeCampaignContactMessageHandler">
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
             <argument>%legislatives_financial_hotline_email%</argument>
             <argument>%legislatives_standard_hotline_email%</argument>
         </service>
@@ -24,7 +24,7 @@
 
         <service id="app.api.legislative_candidate_provider" class="AppBundle\Api\LegislativeCandidateProvider">
             <argument type="service" id="app.repository.legislative_candidate"/>
-            <argument type="service" id="app.twig.media_asset_extension"/>
+            <argument type="service" id="AppBundle\Twig\AssetRuntime"/>
             <argument type="service" id="router"/>
         </service>
 
@@ -70,8 +70,13 @@
             <argument type="service" id="app.membership.adherent_factory"/>
             <argument type="service" id="app.address.post_address_factory"/>
             <argument type="service" id="router"/>
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
             <argument type="service" id="doctrine.orm.entity_manager"/>
+            <argument type="service" id="app.committee.manager"/>
+            <argument type="service" id="app.event.registration_manager"/>
+            <argument type="service" id="AppBundle\CitizenInitiative\CitizenInitiativeManager"/>
+            <argument type="service" id="app.committee.feed_manager"/>
+            <argument type="service" id="app.activity_subscription.manager"/>
         </service>
 
         <service id="app.adherent_change_password_handler" class="AppBundle\Membership\AdherentChangePasswordHandler">
@@ -81,7 +86,7 @@
 
         <service id="app.adherent_reset_password_handler" class="AppBundle\Membership\AdherentResetPasswordHandler">
             <argument type="service" id="router"/>
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
             <argument type="service" id="doctrine.orm.entity_manager"/>
             <argument type="service" id="security.encoder_factory"/>
         </service>
@@ -89,7 +94,7 @@
         <service id="app.adherent_account_activation_handler" class="AppBundle\Membership\AdherentAccountActivationHandler">
             <argument type="service" id="app.adherent_manager"/>
             <argument type="service" id="app.committee.manager"/>
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
             <argument type="service" id="app.security.authentication_utils"/>
         </service>
 
@@ -99,17 +104,24 @@
         </service>
 
         <service id="app.membership_utils" class="AppBundle\Membership\MembershipUtils">
-            <argument type="service" id="app.donation_request.factory"/>
             <argument type="service" id="session"/>
+            <argument type="service" id="request_stack" on-invalid="ignore"/>
+            <tag name="kernel.event_subscriber"/>
         </service>
 
         <service id="app.validator.unique_membership" class="AppBundle\Validator\UniqueMembershipValidator">
             <argument type="service" id="app.repository.adherent"/>
+            <argument type="service" id="security.token_storage" />
             <tag name="validator.constraint_validator" alias="app.validator.unique_membership"/>
         </service>
 
-        <service id="app.membership.adherent_interests_type" class="AppBundle\Form\AdherentInterestsFormType">
+        <service id="AppBundle\Form\MemberInterestsChoiceType">
             <argument type="string">%adherent_interests%</argument>
+            <tag name="form.type" />
+        </service>
+
+        <service id="AppBundle\Form\UnregistrationReasonsChoiceType">
+            <argument type="string">%adherent_unregistration_reasons%</argument>
             <tag name="form.type" />
         </service>
 
@@ -120,8 +132,19 @@
         </service>
 
         <service id="app.adherent.contact_message_handler" class="AppBundle\Contact\ContactMessageHandler">
-            <argument type="service" id="app.mailjet.client.campaign" />
+            <argument type="service" id="app.mailjet.campaign_mailer" />
         </service>
+
+        <service id="AppBundle\Membership\MemberActivityTracker">
+            <argument type="service" id="app.repository.event_registration" />
+            <argument type="service" id="app.repository.event" />
+        </service>
+
+        <service id="app.membership_voter" class="AppBundle\Membership\Voter\MembershipVoter" public="false">
+            <tag name="security.voter"/>
+        </service>
+
+        <service id="app.unregistration.serializer" class="AppBundle\Membership\UnregistrationSerializer" />
 
         <!-- Procurations -->
         <service id="app.procuration.manager" class="AppBundle\Procuration\ProcurationManager">
@@ -138,7 +161,7 @@
         <service id="app.committee.authority" class="AppBundle\Committee\CommitteeManagementAuthority">
             <argument type="service" id="app.committee.manager"/>
             <argument type="service" id="app.committee.url_generator"/>
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
         </service>
 
         <service id="app.committee.factory" class="AppBundle\Committee\CommitteeFactory">
@@ -159,17 +182,19 @@
             <argument type="service" id="event_dispatcher"/>
             <argument type="service" id="app.committee.factory"/>
             <argument type="service" id="doctrine.orm.entity_manager"/>
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
         </service>
 
         <service id="app.committee.contact_members_handler" class="AppBundle\Committee\CommitteeContactMembersCommandHandler">
-            <argument type="service" id="app.mailjet.client.campaign" />
+            <argument type="service" id="app.mailjet.campaign_mailer" />
         </service>
 
         <service id="app.committee.feed_manager" class="AppBundle\Committee\Feed\CommitteeFeedManager">
             <argument type="service" id="doctrine.orm.entity_manager" />
             <argument type="service" id="app.committee.manager"/>
-            <argument type="service" id="app.mailjet.client.campaign"/>
+            <argument type="service" id="app.mailjet.campaign_mailer"/>
+            <argument type="service" id="router"/>
+            <argument type="service" id="app.repository.committee_feed_item"/>
         </service>
 
         <service id="app.validator.unique_committee" class="AppBundle\Validator\UniqueCommitteeValidator">
@@ -201,16 +226,12 @@
             <tag name="security.voter"/>
         </service>
 
-        <service id="app.voter.post_message_voter" class="AppBundle\Committee\Voter\PostMessageCommitteeVoter" public="false">
-            <argument type="service" id="app.committee.manager"/>
+        <service id="app.voter.citizen_initiative_voter" class="AppBundle\CitizenInitiative\Voter\CitizenInitiativeVoter" public="false">
             <tag name="security.voter"/>
         </service>
 
-        <service id="app.twig.committee_extension" class="AppBundle\Twig\CommitteeExtension">
-            <argument type="service" id="security.authorization_checker"/>
-            <argument type="service" id="app.committee.url_generator"/>
-            <argument type="service" id="app.committee.manager"/>
-            <tag name="twig.extension"/>
+        <service id="app.voter.organizer_citizen_initiative_voter" class="AppBundle\CitizenInitiative\Voter\OrganizerCitizenInitiativeVoter" public="false">
+            <tag name="security.voter"/>
         </service>
 
         <!-- Events -->
@@ -224,20 +245,40 @@
             <argument type="service" id="doctrine.orm.entity_manager"/>
         </service>
 
+        <service id="app.citizen_initiative.handler" class="AppBundle\CitizenInitiative\CitizenInitiativeCommandHandler">
+            <argument type="service" id="event_dispatcher"/>
+            <argument type="service" id="app.event.factory"/>
+            <argument type="service" id="doctrine.orm.entity_manager"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
+        </service>
+
         <service id="app.event.invitation_handler" class="AppBundle\Event\EventInvitationHandler">
             <argument type="service" id="doctrine.orm.entity_manager"/>
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
+            <argument type="service" id="app.routing.remote_url_generator"/>
+        </service>
+
+        <service id="app.citizen_initiative.invitation_handler" class="AppBundle\CitizenInitiative\CitizenInitiativeInvitationHandler">
+            <argument type="service" id="doctrine.orm.entity_manager"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
             <argument type="service" id="app.routing.remote_url_generator"/>
         </service>
 
         <service id="app.event.registration_handler" class="AppBundle\Event\EventRegistrationCommandHandler">
             <argument type="service" id="app.event.registration_factory"/>
             <argument type="service" id="app.event.registration_manager"/>
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
+        </service>
+
+        <service id="app.citizen_initiative.registration_handler" class="AppBundle\CitizenInitiative\CitizenInitiativeRegistrationCommandHandler">
+            <argument type="service" id="app.event.registration_factory"/>
+            <argument type="service" id="app.event.registration_manager"/>
+            <argument type="service" id="app.activity_subscription.manager"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
         </service>
 
         <service id="app.event.message_notifier" class="AppBundle\Event\EventMessageNotifier">
-            <argument type="service" id="app.mailjet.client.transactional"/>
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
             <argument type="service" id="app.committee.manager"/>
             <argument type="service" id="app.adherent_manager"/>
             <argument type="service" id="router"/>
@@ -252,7 +293,7 @@
         <service id="app.event.registration_exporter" class="AppBundle\Event\EventRegistrationExporter" />
 
         <service id="app.event.contact_members_handler" class="AppBundle\Event\EventContactMembersCommandHandler">
-            <argument type="service" id="app.mailjet.client.campaign" />
+            <argument type="service" id="app.mailjet.campaign_mailer" />
         </service>
 
         <service id="app.voter.host_event_voter" class="AppBundle\Event\Voter\HostEventVoter" public="false">
@@ -260,38 +301,32 @@
             <tag name="security.voter"/>
         </service>
 
-        <!-- Referents -->
-        <service id="app.referent.database_dumper" class="AppBundle\Referent\ReferentDatabaseDumper">
-            <argument type="service" id="app.repository.adherent"/>
-            <argument type="service" id="app.referent.managed_users.factory"/>
-            <argument type="service" id="app.referent.managed_users.exporter"/>
-            <argument type="service" id="app.storage"/>
+        <!-- CitizenInitiative -->
+        <service id="app.citizen_initiative.message_notifier" class="AppBundle\CitizenInitiative\CitizenInitiativeMessageNotifier">
+            <argument type="service" id="app.mailjet.transactional_mailer"/>
+            <argument type="service" id="app.adherent_manager"/>
+            <argument type="service" id="router"/>
+            <tag name="kernel.event_subscriber"/>
         </service>
 
-        <service id="app.referent.dumped_database_reader" class="AppBundle\Referent\ReferentDumpedDatabaseReader">
-            <argument type="service" id="app.storage"/>
+        <service id="AppBundle\CitizenInitiative\CitizenInitiativeManager">
+            <argument type="service" id="doctrine.orm.entity_manager" />
+            <argument type="service" id="event_dispatcher"/>
+            <argument type="service" id="app.repository.citizen_initiative"/>
         </service>
 
-        <service id="app.referent.managed_users.factory" class="AppBundle\Referent\ManagedUserFactory">
+        <service id="app.activity_subscription.manager" class="AppBundle\CitizenInitiative\ActivitySubscriptionManager">
+            <argument type="service" id="app.repository.activity_subscription" />
             <argument type="service" id="doctrine.orm.entity_manager" />
         </service>
 
-        <service id="app.referent.managed_users.exporter" class="AppBundle\Referent\ManagedUserExporter">
-            <argument type="service" id="app.repository.committee" />
-        </service>
-
+        <!-- Referents -->
         <service id="app.referent.managed_events.exporter" class="AppBundle\Referent\ManagedEventsExporter">
             <argument type="service" id="router" />
         </service>
 
         <service id="app.referent.managed_committees.exporter" class="AppBundle\Referent\ManagedCommitteesExporter">
             <argument type="service" id="router" />
-        </service>
-
-        <service id="app.referent.message_handler.producer" alias="old_sound_rabbit_mq.mailjet_referent_producer" public="false" />
-
-        <service id="app.referent.message_handler" class="AppBundle\Referent\ReferentMessageHandler">
-            <argument type="service" id="app.referent.message_handler.producer" />
         </service>
 
         <!-- Routing -->
@@ -308,6 +343,11 @@
         <service id="app.search.search_results_provider" class="AppBundle\Search\SearchResultsProvider">
             <argument type="service" id="app.repository.committee"/>
             <argument type="service" id="app.repository.event"/>
+        </service>
+
+        <!-- Donation Frequency -->
+        <service id="AppBundle\Validator\PayboxSubscriptionValidator">
+            <tag name="validator.constraint_validator" />
         </service>
 
     </services>

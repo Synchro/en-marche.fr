@@ -1,0 +1,102 @@
+{% macro address(address) %}
+App.createAddressSelector(
+    '{{ address.country.vars.id }}',
+    '{{ address.postalCode.vars.id }}',
+    '{{ address.city.vars.id }}',
+    '{{ address.cityName.vars.id }}'
+);
+{% endmacro %}
+
+{% macro ckeditor(element, height) %}
+CKEDITOR.replace('{{ element }}', {
+    removePlugins: 'elementspath',
+    height: {{ height|default(200) }},
+    resize_enabled: false,
+    toolbar: [
+        { name: 'tools', items: [ 'Maximize' ] },
+        { name: 'clipboard', items: [ 'Undo', 'Redo' ] },
+        { name: 'styles', items: [ 'Format' ] },
+        { name: 'basicstyles', items: [ 'Bold', 'Italic', 'Underline', 'Strike', '-', 'RemoveFormat' ] },
+        { name: 'paragraph', items: [ 'NumberedList', 'BulletedList' ] },
+        { name: 'align', items: [ 'JustifyLeft', 'JustifyCenter', 'JustifyRight' ] },
+        { name: 'links', items: [ 'Link', 'Unlink', 'Image' ] }
+    ]
+});
+{% endmacro %}
+
+{% macro skills(idSkillsField, idSkillSearch, urlSearch) %}
+$(document).ready(function() {
+    var skillList = $('{{ idSkillsField|raw }}');
+    var removeSkill = function () {
+        var btn = $('.skill-remove');
+
+        btn.unbind('click');
+        btn.click(function () {
+            $(this).parent().parent().parent().remove();
+        });
+    };
+    var addSkill = function (elem) {
+        var skill = $(elem).val().trim();
+        if (skill.length > 0) {
+            var skillCount = 0;
+            $('.summary-skill > input[type=hidden]').each(function () {
+                skillCount = Math.max(this.id.replace(/[^0-9]/g, ''), skillCount);
+            });
+            skillCount++;
+
+            var newSkillWidget = skillList.attr('data-prototype');
+            newSkillWidget = newSkillWidget.replace(/__name__/g, skillCount);
+            $(newSkillWidget).appendTo(skillList);
+            var idNewSkill = "#" + $(newSkillWidget).children('div').attr('id');
+            $(idNewSkill).find('input').val(skill);
+            $(idNewSkill).find('.skill-value').text(' ' + skill);
+
+            $(elem).val('');
+            removeSkill();
+        }
+    };
+
+    // Prevent submitting form by pressing enter
+    $(window).keydown(function (event) {
+        if (event.keyCode == 13) {
+            event.preventDefault();
+            return false;
+        }
+    });
+
+    var input = $('{{ idSkillSearch|raw }}');
+
+    // Add skill autocomplete
+    input.autocomplete({
+        source: function(request, response) {
+            var term = request.term.trim();
+            if (term.length > 0) {
+                $.get("{{ urlSearch|raw }}?term=" + term, function(data) { response(data); });
+            } else {
+                response([]);
+            }
+        },
+        minLength: 1,
+        messages: {
+            noResults: '',
+            results: function () {
+            },
+        }
+    });
+
+    // Add skill by pressing Enter
+    input.keyup(function (e) {
+        if (e.which == 13 || e.keyCode == 13) {
+            e.preventDefault();
+            addSkill($(this));
+        }
+    });
+
+    // Add skill by pressing button "Ajouter"
+    $('#add_skill').click(function () {
+        addSkill($('{{ idSkillSearch|raw }}'));
+    });
+
+    removeSkill();
+});
+{% endmacro %}
